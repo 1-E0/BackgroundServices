@@ -118,6 +118,7 @@ class TrackerService : Service(), SensorEventListener {
     private fun showLatihanCompletedNotification() {
         val mainActivityIntent = Intent(this, MainActivity::class.java).apply {
             action = MainActivity.ACTION_SERVICE_STOPPED_LATIHAN
+            putExtra("STEP_COUNT", stepCount)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
         }
         val pendingMainActivityIntent = PendingIntent.getActivity(
@@ -128,7 +129,7 @@ class TrackerService : Service(), SensorEventListener {
         )
         val latihanNotification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID_JUMP_DETECTED)
             .setContentTitle("Latihan Selesai")
-            .setContentText("Anda telah berjalan lebih dari 2 langkah")
+            .setContentText("Anda telah berjalan $stepCount langkah")
             .setSmallIcon(R.drawable.ic_dialog_info)
             .setContentIntent(pendingMainActivityIntent)
             .setAutoCancel(true)
@@ -137,6 +138,11 @@ class TrackerService : Service(), SensorEventListener {
 
         try {
             NotificationManagerCompat.from(this).notify(NOTIFICATION_ID_JUMP_DETECTED + 1, latihanNotification)
+            try {
+                startActivity(mainActivityIntent)
+            } catch (e: Exception) {
+                Log.e("TrackerService", "Could not start activity directly: ${e.message}")
+            }
         } catch (e: SecurityException) {
             Log.e("TrackerService", "gagal memunculkan notifikasi latihan: ${e.message}", e)
         }

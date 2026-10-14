@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.CalendarContract
 import android.widget.Button
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
@@ -97,7 +98,24 @@ class MainActivity : AppCompatActivity() {
         if (intent?.action == ACTION_SERVICE_STOPPED_JUMP) {
             statusTextView.text = "service berhenti karena anda lompat"
         } else if (intent?.action == ACTION_SERVICE_STOPPED_LATIHAN) {
-            statusTextView.text = "latihan selesai (berjalan lebih dari 2 langkah)"
+            val stepCount = intent.getIntExtra("STEP_COUNT", 0)
+            statusTextView.text = "Latihan selesai! Jumlah langkah: $stepCount"
+            createCalendarEvent(stepCount)
+        }
+    }
+
+    private fun createCalendarEvent(stepCount: Int) {
+        val calendarIntent = Intent(Intent.ACTION_INSERT).apply {
+            data = CalendarContract.Events.CONTENT_URI
+            putExtra(CalendarContract.Events.TITLE, "Latihan hari ini")
+            putExtra(CalendarContract.Events.DESCRIPTION, "total langkah latihan hari ini: $stepCount")
+            putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, true)
+            putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, System.currentTimeMillis())
+            putExtra(CalendarContract.EXTRA_EVENT_END_TIME, System.currentTimeMillis())
+        }
+        try {
+            startActivity(calendarIntent)
+        } catch (e: Exception) {
         }
     }
 
