@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">BackgroundServices</string>
-    <string name="status_idle">Status: Idle</string>
+    <string name="status_idle">tekan tombol untuk memulai pelacakan service berhenti saat anda loncat</string>
     <string name="btn_start">Start</string>
     <string name="status_running">Status: Service Running</string>
+    <string name="btn_latihan">mulai latihan</string>
 </resources>
