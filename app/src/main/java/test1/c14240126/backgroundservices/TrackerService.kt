@@ -22,6 +22,9 @@ class TrackerService : Service(), SensorEventListener {
 
     private lateinit var sensorManager: SensorManager
     private var accelerometer: Sensor? = null
+    private var isLatihanMode = false
+    private var stepCount = 0
+    private var isHigh = false
 
     private val NOTIFICATION_CHANNEL_ID_SERVICE_RUNNING = "tracker_service_running"
     private val NOTIFICATION_CHANNEL_ID_JUMP_DETECTED = "tracker_jump_detected"
@@ -37,7 +40,8 @@ class TrackerService : Service(), SensorEventListener {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.d("TrackerService", "Service onStartCommand")
+        isLatihanMode = intent?.getStringExtra("MODE") == "LATIHAN"
+        Log.d("TrackerService", "Service onStartCommand, isLatihanMode: $isLatihanMode")
         startForeground(
             NOTIFICATION_ID_SERVICE_RUNNING,
             buildServiceNotification()
@@ -71,9 +75,12 @@ class TrackerService : Service(), SensorEventListener {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val title = if (isLatihanMode) "Latihan Berjalan" else "pelacak aktivasi latar"
+        val text = if (isLatihanMode) "Latihan mulai berjalan..." else "pelacak tracker service sedang berjalan"
+
         return NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID_SERVICE_RUNNING)
-            .setContentTitle("pelacak aktivasi latar")
-            .setContentText("pelacak tracker service sedang berjalan")
+            .setContentTitle(title)
+            .setContentText(text)
             .setSmallIcon(R.drawable.ic_dialog_info)
             .setOngoing(true)
             .setContentIntent(pendingIntent)
@@ -108,6 +115,33 @@ class TrackerService : Service(), SensorEventListener {
         }
     }
 
+    private fun showLatihanCompletedNotification() {
+        val mainActivityIntent = Intent(this, MainActivity::class.java).apply {
+            action = MainActivity.ACTION_SERVICE_STOPPED_LATIHAN
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val pendingMainActivityIntent = PendingIntent.getActivity(
+            this,
+            2,
+            mainActivityIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val latihanNotification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID_JUMP_DETECTED)
+            .setContentTitle("Latihan Selesai")
+            .setContentText("Anda telah berjalan lebih dari 2 langkah")
+            .setSmallIcon(R.drawable.ic_dialog_info)
+            .setContentIntent(pendingMainActivityIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+
+        try {
+            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID_JUMP_DETECTED + 1, latihanNotification)
+        } catch (e: SecurityException) {
+            Log.e("TrackerService", "gagal memunculkan notifikasi latihan: ${e.message}", e)
+        }
+    }
+
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = getSystemService(NOTIFICATION_SERVICE) as? NotificationManager
@@ -139,15 +173,34 @@ class TrackerService : Service(), SensorEventListener {
     override fun onSensorChanged(event: SensorEvent?) {
         if (event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
             val y = event.values[1]
-            val jumpThresholds = 15.0
 
-            if (abs(y) > jumpThresholds) {
-                Log.d("TrackerService", "lompatan terdeteksi! y: $y")
-
-                sensorManager.unregisterListener(this)
-
-                showJumlNotification()
-                stopSelf()
+            if (isLatihanMode) {
+                val threshold = 12.0
+                if (abs(y) > threshold) {
+                    if (!isHigh) {
+                        isHigh = true
+                        stepCount++
+                        Log.d("TrackerService", "Langkah latihan terdeteksi! Step: $stepCount, y: $y")
+                        if (stepCount > 2) {
+                            Log.d("TrackerService", "Latihan selesai! Lebih dari 2 langkah.")
+                            sensorManager.unregisterListener(this)
+                            showLatihanCompletedNotification()
+                            stopSelf()
+                        }
+                    }
+                } else {
+                    if (abs(y) < 5.0) {
+                        isHigh = false
+                    }
+                }
+            } else {
+                val jumpThresholds = 15.0
+                if (abs(y) > jumpThresholds) {
+                    Log.d("TrackerService", "lompatan terdeteksi! y: $y")
+                    sensorManager.unregisterListener(this)
+                    showJumlNotification()
+                    stopSelf()
+                }
             }
         }
     }

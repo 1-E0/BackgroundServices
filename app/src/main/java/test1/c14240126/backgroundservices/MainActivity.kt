@@ -18,11 +18,13 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val ACTION_SERVICE_STOPPED_JUMP = "test1.c14240126.backgroundservices2.ACTION_SERVICE_STOPPED_JUMP"
+        const val ACTION_SERVICE_STOPPED_LATIHAN = "test1.c14240126.backgroundservices2.ACTION_SERVICE_STOPPED_LATIHAN"
         const val REQUEST_CODE_PERMISSIONS = 101
     }
 
     private lateinit var statusTextView: TextView
     private lateinit var btnStart: Button
+    private lateinit var btnLatihan: Button
 
     private val permissionToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         arrayOf(
@@ -46,6 +48,7 @@ class MainActivity : AppCompatActivity() {
 
         statusTextView = findViewById(R.id.statusTextView)
         btnStart = findViewById(R.id.btnStart)
+        btnLatihan = findViewById(R.id.btnLatihan)
 
         handleIntent(intent)
 
@@ -66,6 +69,22 @@ class MainActivity : AppCompatActivity() {
                 )
             }
         }
+
+        btnLatihan.setOnClickListener {
+            if (hasAllPermissions()) {
+                val intent = Intent(this, TrackerService::class.java).apply {
+                    putExtra("MODE", "LATIHAN")
+                }
+                startForegroundService(intent)
+                statusTextView.text = "Latihan sedang berjalan..."
+            } else {
+                ActivityCompat.requestPermissions(
+                    this,
+                    permissionToRequest,
+                    REQUEST_CODE_PERMISSIONS
+                )
+            }
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -77,6 +96,8 @@ class MainActivity : AppCompatActivity() {
     private fun handleIntent(intent: Intent?) {
         if (intent?.action == ACTION_SERVICE_STOPPED_JUMP) {
             statusTextView.text = "service berhenti karena anda lompat"
+        } else if (intent?.action == ACTION_SERVICE_STOPPED_LATIHAN) {
+            statusTextView.text = "latihan selesai (berjalan lebih dari 2 langkah)"
         }
     }
 
