@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">BackgroundServices</string>
+    <string name="status_idle">Status: Idle</string>
+    <string name="btn_start">Start</string>
+</resources>
